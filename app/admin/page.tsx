@@ -8,7 +8,7 @@ export default function AdminDashboard() {
   const [passwordInput, setPasswordInput] = useState('');
   
   // 🚨 여기에 누나분이 사용하실 비밀번호를 설정하세요 (지금은 임시로 1234)
-  const ADMIN_PASSWORD = '1234'; 
+  const ADMIN_PASSWORD = '5530'; 
 
   const [activeTab, setActiveTab] = useState('orders');
   const [orders, setOrders] = useState<any[]>([]);
