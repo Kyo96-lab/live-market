@@ -30,6 +30,7 @@ export default function Home() {
     }
 
     const { error } = await supabase.from('orders').insert([{
+      product_name: p.name, //
       buyer_name: order.name,
       buyer_phone: order.phone,
       shipping_address: order.address,

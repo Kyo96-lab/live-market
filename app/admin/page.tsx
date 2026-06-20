@@ -3,11 +3,10 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../../utils/supabase';
 
 export default function AdminDashboard() {
-  // 💡 1. 관리자 전용 자물쇠(비밀번호) 상태 추가
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [passwordInput, setPasswordInput] = useState('');
   
-  // 🚨 여기에 누나분이 사용하실 비밀번호를 설정하세요 (지금은 임시로 1234)
+  // 🚨 누나분이 로그인할 때 사용할 비밀번호를 적어주세요 (현재는 1234)
   const ADMIN_PASSWORD = '5530'; 
 
   const [activeTab, setActiveTab] = useState('orders');
@@ -23,7 +22,6 @@ export default function AdminDashboard() {
   const [isAddingProduct, setIsAddingProduct] = useState(false);
 
   useEffect(() => {
-    // 💡 인증된 상태에서만 데이터를 불러오도록 변경
     if (isAuthenticated) {
       fetchOrders();
       fetchProducts();
@@ -83,7 +81,6 @@ export default function AdminDashboard() {
     fetchProducts();
   };
 
-  // 💡 2. 로그인 버튼을 눌렀을 때 실행되는 함수
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     if (passwordInput === ADMIN_PASSWORD) {
@@ -94,7 +91,6 @@ export default function AdminDashboard() {
     }
   };
 
-  // 💡 3. 인증되지 않았을 때(로그인 전) 보여줄 화면
   if (!isAuthenticated) {
     return (
       <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4 font-sans">
@@ -115,7 +111,6 @@ export default function AdminDashboard() {
     );
   }
 
-  // 💡 4. 인증 성공 시 기존 관리자 화면 반환
   return (
     <div className="min-h-screen bg-gray-50 text-gray-800 font-sans pb-20 md:pb-0">
       <div className="bg-white border-b border-gray-200 sticky top-0 z-10 shadow-sm">
@@ -147,7 +142,11 @@ export default function AdminDashboard() {
                     </div>
                     <p className="text-xs text-gray-400 mb-2">{new Date(o.created_at).toLocaleString()}</p>
                     <h3 className="font-bold text-base mb-1">{o.buyer_name} <span className="text-sm font-normal text-gray-500 ml-1">{o.buyer_phone}</span></h3>
-                    <p className="text-sm font-medium text-gray-800 mb-3">{o.option_selected}</p>
+                    
+                    {/* 💡 주문 내역 카드 안에 상품명이 눈에 띄게 표시되도록 레이아웃이 추가되었습니다 */}
+                    <p className="text-sm font-bold text-blue-600 mb-1">{o.product_name || '이전 주문 (상품명 없음)'}</p>
+                    
+                    <p className="text-sm font-medium text-gray-800 mb-3">옵션: {o.option_selected}</p>
                     <div className="bg-gray-50 p-3 rounded-lg text-xs text-gray-600 mb-4">
                       <p className="mb-1"><span className="font-bold mr-2">배송지</span> {o.shipping_address}</p>
                       <p><span className="font-bold mr-2">결제액</span> {o.total_price.toLocaleString()}원</p>
