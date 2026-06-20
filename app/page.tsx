@@ -5,8 +5,6 @@ import Link from 'next/link';
 
 export default function Home() {
   const [products, setProducts] = useState<any[]>([]);
-  
-  // 💡 임시 보관함을 없애고, 오직 하나의 '장바구니(cart)'만 사용합니다.
   const [cart, setCart] = useState<any[]>([]);
   const [buyerInfo, setBuyerInfo] = useState({ name: '', nickname: '', phone: '', address: '' });
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -20,7 +18,6 @@ export default function Home() {
     if (data) setProducts(data);
   };
 
-  // 💡 옵션을 누르는 순간 바로 장바구니로 직행합니다!
   const handleOptionClick = (p: any, option: string) => {
     if (p.stock <= 0) return alert('품절된 상품입니다.');
     
@@ -39,7 +36,6 @@ export default function Home() {
     }
   };
 
-  // 💡 장바구니 안에서 수량을 바로 조절합니다.
   const handleCartQtyChange = (index: number, delta: number) => {
     const newCart = [...cart];
     const item = newCart[index];
@@ -60,7 +56,11 @@ export default function Home() {
 
   const handleCheckout = async () => {
     if (cart.length === 0) return alert('장바구니가 비어있습니다.');
-    if (!buyerInfo.name || !buyerInfo.phone || !buyerInfo.address) return alert('입금자명, 연락처, 배송지 주소를 모두 입력해주세요!');
+    
+    // 💡 닉네임(!buyerInfo.nickname)도 안 적으면 통과하지 못하게 필수값 검사를 추가했습니다!
+    if (!buyerInfo.name || !buyerInfo.nickname || !buyerInfo.phone || !buyerInfo.address) {
+      return alert('입금자명, 닉네임, 연락처, 배송지 주소를 모두 입력해주세요!');
+    }
 
     setIsSubmitting(true);
     try {
@@ -115,7 +115,6 @@ export default function Home() {
         </Link>
       </header>
 
-      {/* 💡 장바구니에 물건이 있으면 우측 하단에 둥둥 떠다니는 버튼 생성 */}
       {cart.length > 0 && (
         <button 
           onClick={() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' })}
@@ -179,7 +178,6 @@ export default function Home() {
         })}
       </div>
 
-      {/* 🛒 수량 조절이 포함된 깔끔한 통합 장바구니 영역 */}
       {cart.length > 0 && (
         <div className="bg-white border-t border-gray-300 rounded-t-3xl shadow-[0_-10px_30px_rgba(0,0,0,0.08)] p-6 mt-10">
           <h2 className="font-black text-2xl mb-5 text-black flex items-center gap-2">
@@ -195,7 +193,6 @@ export default function Home() {
                 <p className="text-sm font-bold text-gray-700 mt-1 mb-3">옵션: {item.option}</p>
                 
                 <div className="flex justify-between items-end">
-                  {/* 💡 장바구니 안에서 바로 수량 조절 가능 */}
                   <div className="flex items-center border-2 border-gray-200 rounded-lg bg-gray-50">
                     <button onClick={() => handleCartQtyChange(idx, -1)} className="px-3 py-1.5 text-gray-600 font-bold hover:bg-gray-200 rounded-l-lg">-</button>
                     <span className="px-3 text-sm font-black text-black">{item.quantity}</span>
@@ -215,7 +212,10 @@ export default function Home() {
           <div className="space-y-3 bg-gray-50 p-5 rounded-2xl border-2 border-gray-200">
             <p className="font-black text-base text-black mb-2">🚚 배송지 정보 입력</p>
             <input placeholder="입금자명 (필수)" value={buyerInfo.name} onChange={e => setBuyerInfo({...buyerInfo, name: e.target.value})} className="w-full border-2 border-gray-300 p-3.5 rounded-xl text-base font-bold text-black outline-none focus:border-black placeholder-gray-400" />
-            <input placeholder="주문자 닉네임 (선택사항)" value={buyerInfo.nickname} onChange={e => setBuyerInfo({...buyerInfo, nickname: e.target.value})} className="w-full border-2 border-gray-300 p-3.5 rounded-xl text-base font-bold text-black outline-none focus:border-black placeholder-gray-400" />
+            
+            {/* 💡 (필수)로 문구를 변경했습니다 */}
+            <input placeholder="주문자 닉네임 (필수)" value={buyerInfo.nickname} onChange={e => setBuyerInfo({...buyerInfo, nickname: e.target.value})} className="w-full border-2 border-gray-300 p-3.5 rounded-xl text-base font-bold text-black outline-none focus:border-black placeholder-gray-400" />
+            
             <input placeholder="연락처 (숫자만)" value={buyerInfo.phone} onChange={e => setBuyerInfo({...buyerInfo, phone: e.target.value})} className="w-full border-2 border-gray-300 p-3.5 rounded-xl text-base font-bold text-black outline-none focus:border-black placeholder-gray-400" />
             <input placeholder="배송지 주소 (상세주소 포함)" value={buyerInfo.address} onChange={e => setBuyerInfo({...buyerInfo, address: e.target.value})} className="w-full border-2 border-gray-300 p-3.5 rounded-xl text-base font-bold text-black outline-none focus:border-black placeholder-gray-400" />
           </div>
