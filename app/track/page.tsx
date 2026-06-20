@@ -37,7 +37,6 @@ export default function TrackOrder() {
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-300 mb-6">
           <h2 className="font-black mb-4 text-black text-lg">주문자 정보 입력</h2>
           
-          {/* 💡 입력창 텍스트와 테두리를 아주 진하게 변경했습니다 */}
           <input 
             placeholder="입금자명" 
             className="w-full border-2 border-gray-300 p-4 rounded-xl mb-3 text-base font-bold text-black placeholder-gray-500 focus:border-black outline-none transition" 
@@ -76,7 +75,6 @@ export default function TrackOrder() {
                   </div>
                   <p className="text-sm font-bold text-gray-500 mb-2">{new Date(order.created_at).toLocaleString()}</p>
                   
-                  {/* 💡 상품명과 옵션을 크고 까맣게 변경 */}
                   <h4 className="font-black text-lg mb-1 text-black">{order.product_name || '이전 주문'}</h4>
                   <p className="text-base font-bold text-black mb-4">옵션: {order.option_selected}</p>
                   
@@ -84,7 +82,7 @@ export default function TrackOrder() {
                     <p className="flex justify-between"><span className="font-bold text-gray-600">배송지</span> <span className="font-bold text-black text-right ml-4">{order.shipping_address}</span></p>
                     <p className="flex justify-between"><span className="font-bold text-gray-600">결제액</span> <span className="font-black text-red-600 text-base">{order.total_price.toLocaleString()}원</span></p>
                     
-                    {/* 💡 운송장 번호가 굵고 눈에 띄게 표시됩니다 */}
+                    {/* 운송장 번호 노출 영역 */}
                     {order.tracking_number && (
                       <div className="mt-4 pt-4 border-t-2 border-gray-200">
                         <p className="font-black text-blue-700 text-lg text-center bg-blue-50 py-3 rounded-lg border border-blue-100">
