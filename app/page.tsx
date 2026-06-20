@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { supabase } from '../utils/supabase'; // 💡 올바른 경로
+import { supabase } from '../utils/supabase';
 import Link from 'next/link';
 
 export default function Home() {
@@ -70,43 +70,34 @@ export default function Home() {
               <div className="space-y-4 border-t border-gray-100 pt-4">
                 <p className="text-sm font-bold text-black">옵션 선택</p>
                 <div className="flex flex-wrap gap-2">
-                  {optionsArray.map((opt: string) => (
-                    <button 
-                      key={opt}
-                      onClick={() => handleOptionClick(p.id, opt)}
-                      className={`px-4 py-2 rounded-lg text-sm font-bold border transition-colors ${
-                        orders[p.id]?.selectedOption === opt 
-                          ? 'bg-black text-white border-black' 
-                          : 'bg-white text-gray-800 border-gray-300 hover:bg-gray-50'
-                      }`}
-                    >
-                      {opt}
-                    </button>
-                  ))}
+                  {optionsArray.map((opt: string) => {
+                    // 💡 품절 여부를 확인합니다.
+                    const isSoldOut = (p.soldout_options || '').split(',').map((o:string)=>o.trim()).includes(opt);
+                    
+                    return (
+                      <button 
+                        key={opt}
+                        disabled={isSoldOut} // 품절 시 클릭 방지
+                        onClick={() => handleOptionClick(p.id, opt)}
+                        className={`px-4 py-2 rounded-lg text-sm font-bold border transition-colors ${
+                          isSoldOut 
+                            ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed line-through' 
+                            : orders[p.id]?.selectedOption === opt 
+                              ? 'bg-black text-white border-black' 
+                              : 'bg-white text-gray-800 border-gray-300 hover:bg-gray-50'
+                        }`}
+                      >
+                        {opt} {isSoldOut && '[품절]'}
+                      </button>
+                    );
+                  })}
                 </div>
                 
-                <input 
-                  placeholder="입금자명" 
-                  className="w-full border border-gray-300 p-3.5 rounded-xl text-base text-black placeholder-gray-500 focus:border-black focus:ring-1 focus:ring-black outline-none transition" 
-                  onChange={(e) => handleInputChange(p.id, 'name', e.target.value)} 
-                />
-                <input 
-                  placeholder="연락처 (예: 01012345678)" 
-                  className="w-full border border-gray-300 p-3.5 rounded-xl text-base text-black placeholder-gray-500 focus:border-black focus:ring-1 focus:ring-black outline-none transition" 
-                  onChange={(e) => handleInputChange(p.id, 'phone', e.target.value)} 
-                />
-                <input 
-                  placeholder="배송지 주소 (상세주소 포함)" 
-                  className="w-full border border-gray-300 p-3.5 rounded-xl text-base text-black placeholder-gray-500 focus:border-black focus:ring-1 focus:ring-black outline-none transition" 
-                  onChange={(e) => handleInputChange(p.id, 'address', e.target.value)} 
-                />
+                <input placeholder="입금자명" className="w-full border border-gray-300 p-3.5 rounded-xl text-base text-black placeholder-gray-500 focus:border-black outline-none transition" onChange={(e) => handleInputChange(p.id, 'name', e.target.value)} />
+                <input placeholder="연락처 (예: 01012345678)" className="w-full border border-gray-300 p-3.5 rounded-xl text-base text-black placeholder-gray-500 focus:border-black outline-none transition" onChange={(e) => handleInputChange(p.id, 'phone', e.target.value)} />
+                <input placeholder="배송지 주소 (상세주소 포함)" className="w-full border border-gray-300 p-3.5 rounded-xl text-base text-black placeholder-gray-500 focus:border-black outline-none transition" onChange={(e) => handleInputChange(p.id, 'address', e.target.value)} />
                 
-                <button 
-                  onClick={() => handleSubmitOrder(p)} 
-                  className="w-full bg-black text-white p-4 rounded-xl text-base font-bold hover:bg-gray-800 transition shadow-md mt-2"
-                >
-                  주문하기
-                </button>
+                <button onClick={() => handleSubmitOrder(p)} className="w-full bg-black text-white p-4 rounded-xl text-base font-bold hover:bg-gray-800 transition shadow-md mt-2">주문하기</button>
               </div>
             </div>
           );
