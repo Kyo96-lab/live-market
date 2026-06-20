@@ -21,7 +21,6 @@ export default function AdminDashboard() {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [isAddingProduct, setIsAddingProduct] = useState(false);
 
-  // 💡 운송장 번호 입력 상태 관리
   const [trackingInputs, setTrackingInputs] = useState<any>({});
 
   useEffect(() => {
@@ -67,6 +66,44 @@ export default function AdminDashboard() {
       alert('발송 처리가 완료되었습니다!');
       fetchOrders(); 
     }
+  };
+
+  // 💡 새롭게 추가된 엑셀(CSV) 다운로드 함수입니다!
+  const handleDownloadExcel = () => {
+    if (orders.length === 0) return alert('다운로드할 주문 내역이 없습니다.');
+
+    // 1. 엑셀의 맨 위쪽 기둥(헤더)을 만듭니다.
+    const headers = ['주문일시', '주문자명', '연락처', '상품명', '옵션', '배송지', '결제액', '상태', '운송장번호'];
+
+    // 2. 주문 데이터를 엑셀 행에 맞게 변환합니다. (주소의 쉼표가 엑셀 칸을 망치지 않게 띄어쓰기로 바꿉니다)
+    const rows = orders.map(o => [
+      new Date(o.created_at).toLocaleString(),
+      o.buyer_name,
+      o.buyer_phone,
+      o.product_name || '',
+      o.option_selected,
+      o.shipping_address.replace(/,/g, ' '), 
+      o.total_price,
+      o.status,
+      o.tracking_number || ''
+    ]);
+
+    // 3. 한글 깨짐 방지(BOM)를 추가하고 데이터를 합칩니다.
+    const csvContent = "\uFEFF" + [headers, ...rows].map(e => e.join(",")).join("\n");
+
+    // 4. 파일을 생성하여 다운로드를 실행합니다.
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    
+    // 파일명은 '주문내역_오늘날짜.csv'로 저장됩니다.
+    const dateStr = new Date().toISOString().slice(0, 10);
+    link.setAttribute("download", `주문내역_${dateStr}.csv`);
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const uploadImage = async (file: File) => {
@@ -140,7 +177,22 @@ export default function AdminDashboard() {
           <div className="space-y-6">
             <div className="flex justify-between items-center px-1">
               <h2 className="font-bold text-lg">최근 주문 내역</h2>
-              <button onClick={fetchOrders} className="text-xs md:text-sm bg-white border border-gray-200 px-4 py-2 rounded-lg font-bold shadow-sm hover:bg-gray-50">새로고침</button>
+              
+              {/* 💡 엑셀 다운로드 버튼이 새로고침 버튼 옆에 추가되었습니다! */}
+              <div className="flex gap-2">
+                <button 
+                  onClick={handleDownloadExcel} 
+                  className="text-xs md:text-sm bg-green-600 text-white px-4 py-2 rounded-lg font-bold shadow-sm hover:bg-green-700 transition"
+                >
+                  📥 엑셀 다운로드
+                </button>
+                <button 
+                  onClick={fetchOrders} 
+                  className="text-xs md:text-sm bg-white border border-gray-200 px-4 py-2 rounded-lg font-bold shadow-sm hover:bg-gray-50"
+                >
+                  새로고침
+                </button>
+              </div>
             </div>
             {isLoadingOrders ? <p className="text-center text-gray-400 py-10">로딩 중...</p> : orders.length === 0 ? <p className="text-center text-gray-400 py-10">주문이 없습니다.</p> : (
               <div className="grid grid-cols-1 gap-4">
@@ -166,7 +218,6 @@ export default function AdminDashboard() {
                         <button onClick={() => handleUpdateStatus(o.id, '결제완료')} className="text-xs bg-black text-white px-4 py-2 rounded-lg font-bold hover:bg-gray-800">✓ 입금 확인</button>
                       )}
                       
-                      {/* 💡 결제완료 상태일 때 운송장 입력 폼 노출 */}
                       {o.status === '결제완료' && (
                         <div className="flex w-full md:w-auto gap-2">
                           <input 
@@ -192,7 +243,6 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* ... 상품 관리 탭 생략 ... */}
         {activeTab === 'products' && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
             <div className="col-span-1">
