@@ -6,7 +6,7 @@ export default function AdminDashboard() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [passwordInput, setPasswordInput] = useState('');
   
-  // 🚨 누나분이 로그인할 때 사용할 비밀번호를 적어주세요 (현재는 1234)
+  // 🚨 원래 설정하셨던 누나분 전용 비밀번호로 꼭 다시 바꿔주세요!
   const ADMIN_PASSWORD = '5530'; 
 
   const [activeTab, setActiveTab] = useState('orders');
@@ -20,6 +20,9 @@ export default function AdminDashboard() {
   const [newProductOptions, setNewProductOptions] = useState('');
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [isAddingProduct, setIsAddingProduct] = useState(false);
+
+  // 💡 운송장 번호 입력을 관리하는 상태
+  const [trackingInputs, setTrackingInputs] = useState<any>({});
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -45,7 +48,26 @@ export default function AdminDashboard() {
   const handleUpdateStatus = async (orderId: string, newStatus: string) => {
     const { error } = await supabase.from('orders').update({ status: newStatus }).eq('id', orderId);
     if (error) alert('상태 업데이트 실패');
-    else setOrders(orders.map(o => o.id === orderId ? { ...o, status: newStatus } : o));
+    else {
+      setOrders(orders.map(o => o.id === orderId ? { ...o, status: newStatus } : o));
+    }
+  };
+
+  // 💡 운송장 번호 등록 및 배송중 처리 함수
+  const handleDispatch = async (orderId: string) => {
+    const trackingNum = trackingInputs[orderId];
+    if (!trackingNum) return alert('운송장 번호를 입력해주세요!');
+
+    const { error } = await supabase
+      .from('orders')
+      .update({ status: '배송중', tracking_number: trackingNum })
+      .eq('id', orderId);
+
+    if (error) alert('운송장 등록 실패');
+    else {
+      alert('발송 처리가 완료되었습니다!');
+      fetchOrders(); 
+    }
   };
 
   const uploadImage = async (file: File) => {
@@ -83,12 +105,8 @@ export default function AdminDashboard() {
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    if (passwordInput === ADMIN_PASSWORD) {
-      setIsAuthenticated(true);
-    } else {
-      alert('비밀번호가 일치하지 않습니다.');
-      setPasswordInput('');
-    }
+    if (passwordInput === ADMIN_PASSWORD) setIsAuthenticated(true);
+    else { alert('비밀번호가 일치하지 않습니다.'); setPasswordInput(''); }
   };
 
   if (!isAuthenticated) {
@@ -96,16 +114,8 @@ export default function AdminDashboard() {
       <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4 font-sans">
         <form onSubmit={handleLogin} className="bg-white p-8 rounded-2xl shadow-sm border border-gray-200 w-full max-w-sm text-center">
           <h1 className="text-xl font-black mb-6">사장님 전용 관리실 🔒</h1>
-          <input
-            type="password"
-            value={passwordInput}
-            onChange={(e) => setPasswordInput(e.target.value)}
-            placeholder="비밀번호를 입력하세요"
-            className="w-full border border-gray-300 p-4 rounded-xl mb-4 text-center focus:border-black focus:ring-1 focus:ring-black outline-none transition"
-          />
-          <button type="submit" className="w-full bg-black text-white p-4 rounded-xl font-bold hover:bg-gray-800 transition">
-            입장하기
-          </button>
+          <input type="password" value={passwordInput} onChange={(e) => setPasswordInput(e.target.value)} placeholder="비밀번호를 입력하세요" className="w-full border border-gray-300 p-4 rounded-xl mb-4 text-center focus:border-black focus:ring-1 outline-none" />
+          <button type="submit" className="w-full bg-black text-white p-4 rounded-xl font-bold hover:bg-gray-800">입장하기</button>
         </form>
       </div>
     );
@@ -120,8 +130,8 @@ export default function AdminDashboard() {
             <button onClick={() => setIsAuthenticated(false)} className="text-xs text-gray-500 underline hover:text-black">로그아웃</button>
           </div>
           <div className="flex gap-2">
-            <button onClick={() => setActiveTab('orders')} className={`flex-1 py-3 rounded-lg font-bold text-sm transition-colors ${activeTab === 'orders' ? 'bg-black text-white' : 'bg-gray-100 text-gray-500'}`}>📦 주문 관리</button>
-            <button onClick={() => setActiveTab('products')} className={`flex-1 py-3 rounded-lg font-bold text-sm transition-colors ${activeTab === 'products' ? 'bg-black text-white' : 'bg-gray-100 text-gray-500'}`}>🛍️ 상품 관리</button>
+            <button onClick={() => setActiveTab('orders')} className={`flex-1 py-3 rounded-lg font-bold text-sm ${activeTab === 'orders' ? 'bg-black text-white' : 'bg-gray-100 text-gray-500'}`}>📦 주문 관리</button>
+            <button onClick={() => setActiveTab('products')} className={`flex-1 py-3 rounded-lg font-bold text-sm ${activeTab === 'products' ? 'bg-black text-white' : 'bg-gray-100 text-gray-500'}`}>🛍️ 상품 관리</button>
           </div>
         </div>
       </div>
@@ -137,25 +147,43 @@ export default function AdminDashboard() {
               <div className="grid grid-cols-1 gap-4">
                 {orders.map((o) => (
                   <div key={o.id} className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 relative">
-                    <div className="absolute top-4 right-4">
-                      {o.status === '결제완료' ? <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-bold">결제완료</span> : <span className="px-3 py-1 bg-red-100 text-red-600 rounded-full text-xs font-bold animate-pulse">입금대기</span>}
+                    <div className="absolute top-4 right-4 flex gap-1">
+                      {o.status === '배송중' && <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-bold">배송중</span>}
+                      {o.status === '결제완료' && <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-bold">결제완료</span>}
+                      {o.status === '입금대기' && <span className="px-3 py-1 bg-red-100 text-red-600 rounded-full text-xs font-bold animate-pulse">입금대기</span>}
                     </div>
                     <p className="text-xs text-gray-400 mb-2">{new Date(o.created_at).toLocaleString()}</p>
                     <h3 className="font-bold text-base mb-1">{o.buyer_name} <span className="text-sm font-normal text-gray-500 ml-1">{o.buyer_phone}</span></h3>
-                    
-                    {/* 💡 주문 내역 카드 안에 상품명이 눈에 띄게 표시되도록 레이아웃이 추가되었습니다 */}
-                    <p className="text-sm font-bold text-blue-600 mb-1">{o.product_name || '이전 주문 (상품명 없음)'}</p>
-                    
+                    <p className="text-sm font-bold text-blue-600 mb-1">{o.product_name || '이전 주문'}</p>
                     <p className="text-sm font-medium text-gray-800 mb-3">옵션: {o.option_selected}</p>
                     <div className="bg-gray-50 p-3 rounded-lg text-xs text-gray-600 mb-4">
                       <p className="mb-1"><span className="font-bold mr-2">배송지</span> {o.shipping_address}</p>
                       <p><span className="font-bold mr-2">결제액</span> {o.total_price.toLocaleString()}원</p>
+                      {o.tracking_number && <p className="mt-2 text-blue-600"><span className="font-bold mr-2 text-gray-500">운송장</span> {o.tracking_number}</p>}
                     </div>
-                    <div className="flex gap-2 justify-end border-t pt-3">
-                      {o.status === '입금대기' ? (
-                        <button onClick={() => handleUpdateStatus(o.id, '결제완료')} className="text-xs bg-black text-white px-4 py-2 rounded-lg font-bold hover:bg-gray-800 transition">✓ 입금 확인</button>
-                      ) : (
-                        <button onClick={() => handleUpdateStatus(o.id, '입금대기')} className="text-xs bg-gray-200 text-gray-600 px-4 py-2 rounded-lg font-bold hover:bg-gray-300 transition">✕ 입금대기로 변경</button>
+
+                    <div className="flex flex-col md:flex-row gap-2 justify-end border-t pt-3 mt-2">
+                      {o.status === '입금대기' && (
+                        <button onClick={() => handleUpdateStatus(o.id, '결제완료')} className="text-xs bg-black text-white px-4 py-2 rounded-lg font-bold hover:bg-gray-800">✓ 입금 확인</button>
+                      )}
+                      
+                      {/* 💡 이 부분이 핵심입니다! 결제완료 상태일 때 운송장 입력 폼이 노출됩니다. */}
+                      {o.status === '결제완료' && (
+                        <div className="flex w-full md:w-auto gap-2">
+                          <input 
+                            type="text" 
+                            placeholder="택배사 및 송장번호" 
+                            className="flex-1 md:w-48 text-xs border border-gray-300 p-2 rounded-lg outline-none focus:border-black"
+                            value={trackingInputs[o.id] || ''}
+                            onChange={(e) => setTrackingInputs({...trackingInputs, [o.id]: e.target.value})}
+                          />
+                          <button onClick={() => handleDispatch(o.id)} className="text-xs bg-blue-600 text-white px-3 py-2 rounded-lg font-bold hover:bg-blue-700">발송 처리</button>
+                          <button onClick={() => handleUpdateStatus(o.id, '입금대기')} className="text-xs bg-gray-200 text-gray-600 px-3 py-2 rounded-lg font-bold hover:bg-gray-300">✕ 취소</button>
+                        </div>
+                      )}
+
+                      {o.status === '배송중' && (
+                        <button onClick={() => handleUpdateStatus(o.id, '결제완료')} className="text-xs bg-gray-200 text-gray-600 px-4 py-2 rounded-lg font-bold hover:bg-gray-300">✕ 배송전으로 되돌리기</button>
                       )}
                     </div>
                   </div>
@@ -165,6 +193,7 @@ export default function AdminDashboard() {
           </div>
         )}
 
+        {/* ... 상품 관리 탭 부분 ... */}
         {activeTab === 'products' && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
             <div className="col-span-1">
@@ -178,9 +207,9 @@ export default function AdminDashboard() {
                   </label>
                   {imageFile && <p className="text-xs text-green-600 mt-2 font-bold ml-1">✓ {imageFile.name}</p>}
                 </div>
-                <div className="mb-4"><input type="text" value={newProductName} onChange={(e) => setNewProductName(e.target.value)} placeholder="상품명" className="w-full border p-3.5 rounded-xl text-sm" /></div>
-                <div className="mb-4"><input type="number" value={newProductPrice} onChange={(e) => setNewProductPrice(e.target.value)} placeholder="가격 (숫자만)" className="w-full border p-3.5 rounded-xl text-sm" /></div>
-                <div className="mb-6"><input type="text" value={newProductOptions} onChange={(e) => setNewProductOptions(e.target.value)} placeholder="옵션 (쉼표 구분)" className="w-full border p-3.5 rounded-xl text-sm" /></div>
+                <div className="mb-4"><input type="text" value={newProductName} onChange={(e) => setNewProductName(e.target.value)} placeholder="상품명" className="w-full border p-3.5 rounded-xl text-sm outline-none focus:border-black" /></div>
+                <div className="mb-4"><input type="number" value={newProductPrice} onChange={(e) => setNewProductPrice(e.target.value)} placeholder="가격 (숫자만)" className="w-full border p-3.5 rounded-xl text-sm outline-none focus:border-black" /></div>
+                <div className="mb-6"><input type="text" value={newProductOptions} onChange={(e) => setNewProductOptions(e.target.value)} placeholder="옵션 (쉼표 구분)" className="w-full border p-3.5 rounded-xl text-sm outline-none focus:border-black" /></div>
                 <button type="submit" disabled={isAddingProduct} className="w-full bg-black text-white p-4 rounded-xl font-bold disabled:bg-gray-400">{isAddingProduct ? '등록 중...' : '추가하기'}</button>
               </form>
             </div>
