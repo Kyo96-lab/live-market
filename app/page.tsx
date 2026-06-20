@@ -60,14 +60,37 @@ export default function Home() {
       <div className="p-4 space-y-6">
         {products.map((p) => {
           const optionsArray = p.options ? p.options.split(',').map((o: string) => o.trim()) : [];
+          
+          // 💡 쉼표로 저장된 이미지 URL들을 쪼개서 사진 배열로 만듭니다.
+          const imagesArray = p.image_url ? p.image_url.split(',') : [];
 
           return (
             <div key={p.id} className="bg-white p-5 rounded-2xl shadow-sm border border-gray-200">
-              <img src={p.image_url} className="w-full h-64 object-cover rounded-xl mb-4 bg-gray-50" />
+              
+              {/* 💡 옆으로 넘기는(스와이프) 갤러리 영역입니다. 스크롤바는 깔끔하게 숨겼습니다! */}
+              <div 
+                className="flex overflow-x-auto gap-3 mb-3 snap-x snap-mandatory hide-scroll" 
+                style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+              >
+                <style>{`.hide-scroll::-webkit-scrollbar { display: none; }`}</style>
+                {imagesArray.map((imgUrl: string, idx: number) => (
+                  <img 
+                    key={idx} 
+                    src={imgUrl} 
+                    className="w-full shrink-0 snap-center h-80 object-cover rounded-xl bg-gray-50 border border-gray-100" 
+                    alt={`${p.name} 이미지 ${idx + 1}`}
+                  />
+                ))}
+              </div>
+              
+              {/* 사진이 2장 이상일 때만 안내 문구를 띄워줍니다 */}
+              {imagesArray.length > 1 && (
+                <p className="text-center text-xs text-gray-400 font-bold mb-5 mt-1 animate-pulse">← 사진을 옆으로 넘겨보세요 →</p>
+              )}
+
               <h1 className="text-lg font-bold text-black">{p.name}</h1>
               <p className="text-red-600 font-black text-xl mb-4">{p.price.toLocaleString()}원</p>
               
-              {/* 💡 상품 상세 설명이 표시되는 영역입니다. 줄바꿈(엔터)이 그대로 적용됩니다. */}
               {p.description && (
                 <div className="mb-6 p-4 bg-gray-50 rounded-xl text-sm text-gray-700 leading-relaxed whitespace-pre-wrap border border-gray-100">
                   {p.description}
@@ -79,7 +102,6 @@ export default function Home() {
                 <div className="flex flex-wrap gap-2">
                   {optionsArray.map((opt: string) => {
                     const isSoldOut = (p.soldout_options || '').split(',').map((o:string)=>o.trim()).includes(opt);
-                    
                     return (
                       <button 
                         key={opt}

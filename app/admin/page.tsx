@@ -16,11 +16,10 @@ export default function AdminDashboard() {
   const [newProductName, setNewProductName] = useState('');
   const [newProductPrice, setNewProductPrice] = useState('');
   const [newProductOptions, setNewProductOptions] = useState('');
-  
-  // 💡 상세 설명 입력을 위한 상태 추가
   const [newProductDescription, setNewProductDescription] = useState('');
   
-  const [imageFile, setImageFile] = useState<File | null>(null);
+  // 💡 한 장이 아닌 '여러 장'을 담기 위해 배열(Array)로 변경했습니다!
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [isAddingProduct, setIsAddingProduct] = useState(false);
 
   const [trackingInputs, setTrackingInputs] = useState<any>({});
@@ -91,25 +90,23 @@ export default function AdminDashboard() {
 
   const handleAddProduct = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newProductName || !newProductPrice || !newProductOptions || !imageFile) return alert('모든 정보를 입력해주세요.');
+    if (!newProductName || !newProductPrice || !newProductOptions || imageFiles.length === 0) return alert('모든 정보를 입력해주세요.');
     setIsAddingProduct(true);
     try {
-      const imageUrl = await uploadImage(imageFile);
+      // 💡 선택한 모든 사진을 동시에 업로드하고 URL들을 받아옵니다.
+      const urls = await Promise.all(imageFiles.map(file => uploadImage(file)));
+      const imageUrlsString = urls.join(','); // URL들을 쉼표로 묶습니다.
       
-      // 💡 데이터베이스에 전송할 때 description(상세 설명)도 함께 보냅니다.
       const { error } = await supabase.from('products').insert([{ 
         name: newProductName, 
         price: parseInt(newProductPrice), 
         options: newProductOptions, 
-        description: newProductDescription, // 추가됨
-        image_url: imageUrl 
+        description: newProductDescription,
+        image_url: imageUrlsString 
       }]);
-      
       if (error) throw error;
       alert('등록 성공!');
-      
-      // 💡 입력창 초기화
-      setNewProductName(''); setNewProductPrice(''); setNewProductOptions(''); setNewProductDescription(''); setImageFile(null);
+      setNewProductName(''); setNewProductPrice(''); setNewProductOptions(''); setNewProductDescription(''); setImageFiles([]);
       fetchProducts();
     } catch (error) { alert('오류 발생'); } 
     finally { setIsAddingProduct(false); }
@@ -169,7 +166,6 @@ export default function AdminDashboard() {
       <div className="max-w-6xl mx-auto px-4 py-6">
         {activeTab === 'orders' && (
           <div className="space-y-6">
-            {/* ... 주문 내역 리스트 (생략 없이 기존과 동일) ... */}
             <div className="flex justify-between items-center px-1">
               <h2 className="font-bold text-lg">최근 주문 내역</h2>
               <div className="flex gap-2">
@@ -219,45 +215,48 @@ export default function AdminDashboard() {
               <form onSubmit={handleAddProduct} className="bg-white p-6 rounded-2xl shadow-sm border sticky top-28">
                 <h2 className="font-bold text-lg mb-4 pb-3 border-b">새 상품 등록</h2>
                 <div className="mb-5">
-                  <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-xl cursor-pointer bg-gray-50">
-                    <input type="file" accept="image/*" className="hidden" onChange={(e) => setImageFile(e.target.files?.[0] || null)} />
+                  <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-xl cursor-pointer bg-gray-50 hover:bg-gray-100 transition">
+                    {/* 💡 multiple 속성을 달아 한 번에 여러 장을 고를 수 있게 했습니다 */}
+                    <input 
+                      type="file" 
+                      accept="image/*" 
+                      multiple 
+                      className="hidden" 
+                      onChange={(e) => {
+                        if (e.target.files) setImageFiles(Array.from(e.target.files));
+                      }} 
+                    />
                     <span className="text-2xl mb-2">📸</span>
+                    <span className="text-xs text-gray-500 font-bold">사진 여러 장 선택 가능</span>
                   </label>
-                  {imageFile && <p className="text-xs text-green-600 mt-2 font-bold ml-1">✓ {imageFile.name}</p>}
+                  {/* 💡 몇 장이 선택되었는지 보여줍니다 */}
+                  {imageFiles.length > 0 && <p className="text-xs text-green-600 mt-2 font-bold ml-1">✓ 총 {imageFiles.length}장 선택됨</p>}
                 </div>
                 <div className="mb-3"><input type="text" value={newProductName} onChange={(e) => setNewProductName(e.target.value)} placeholder="상품명" className="w-full border p-3 rounded-xl text-sm outline-none" /></div>
                 <div className="mb-3"><input type="number" value={newProductPrice} onChange={(e) => setNewProductPrice(e.target.value)} placeholder="가격 (숫자만)" className="w-full border p-3 rounded-xl text-sm outline-none" /></div>
                 <div className="mb-3"><input type="text" value={newProductOptions} onChange={(e) => setNewProductOptions(e.target.value)} placeholder="옵션 (쉼표 구분)" className="w-full border p-3 rounded-xl text-sm outline-none" /></div>
+                <div className="mb-5"><textarea value={newProductDescription} onChange={(e) => setNewProductDescription(e.target.value)} placeholder="상품 상세 설명 (재질, 핏, 안내사항 등)" className="w-full border p-3 rounded-xl text-sm outline-none resize-none h-24" /></div>
                 
-                {/* 💡 이 곳에 상세 설명(textarea)을 길게 적을 수 있는 공간이 추가되었습니다 */}
-                <div className="mb-5">
-                  <textarea 
-                    value={newProductDescription} 
-                    onChange={(e) => setNewProductDescription(e.target.value)} 
-                    placeholder="상품 상세 설명 (재질, 핏, 안내사항 등)" 
-                    className="w-full border p-3 rounded-xl text-sm outline-none resize-none h-24" 
-                  />
-                </div>
-                
-                <button type="submit" disabled={isAddingProduct} className="w-full bg-black text-white p-4 rounded-xl font-bold disabled:bg-gray-400">{isAddingProduct ? '등록 중...' : '추가하기'}</button>
+                <button type="submit" disabled={isAddingProduct || imageFiles.length === 0} className="w-full bg-black text-white p-4 rounded-xl font-bold disabled:bg-gray-400">
+                  {isAddingProduct ? '등록 중...' : '추가하기'}
+                </button>
               </form>
             </div>
             
             <div className="col-span-1 md:col-span-2 space-y-4">
               {products.map((p) => {
                 const optionsArray = p.options ? p.options.split(',').map((o:string) => o.trim()) : [];
+                // 💡 관리자 목록에서는 쉼표로 구분된 사진 중 '첫 번째 사진'만 대표로 띄워줍니다.
+                const firstImage = p.image_url ? p.image_url.split(',')[0] : '';
+
                 return (
                   <div key={p.id} className="bg-white p-5 rounded-2xl shadow-sm border relative">
                     <div className="flex gap-5 items-start">
-                      <img src={p.image_url} alt="" className="w-24 h-24 object-cover rounded-xl bg-gray-100 flex-shrink-0"/>
+                      <img src={firstImage} alt="" className="w-24 h-24 object-cover rounded-xl bg-gray-100 flex-shrink-0"/>
                       <div className="flex-grow">
                         <h3 className="font-bold text-lg">{p.name}</h3>
                         <p className="text-red-500 font-black text-sm mb-2">{p.price.toLocaleString()}원</p>
-                        
-                        {/* 💡 등록된 상세 설명이 있으면 관리자도 볼 수 있게 표시합니다 */}
-                        {p.description && (
-                          <p className="text-xs text-gray-600 bg-gray-50 p-2 rounded whitespace-pre-wrap">{p.description}</p>
-                        )}
+                        {p.description && <p className="text-xs text-gray-600 bg-gray-50 p-2 rounded whitespace-pre-wrap">{p.description}</p>}
                       </div>
                       <button onClick={() => handleDeleteProduct(p.id)} className="absolute top-4 right-4 text-gray-400 text-xl">🗑️</button>
                     </div>
