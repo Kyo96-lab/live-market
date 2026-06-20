@@ -242,8 +242,7 @@ export default function AdminDashboard() {
                     <div className="mt-4 pt-4 border-t border-gray-100">
                       <p className="text-xs font-bold text-gray-500 mb-2">📦 옵션 재고 관리 (클릭 시 상태 변경)</p>
                       <div className="flex flex-wrap gap-2">
-                        {optionsArray.map(opt => {
-                          // 데이터베이스에 저장된 품절 텍스트를 검사합니다.
+{optionsArray.map((opt: string) => {                          // 데이터베이스에 저장된 품절 텍스트를 검사합니다.
                           const isSoldOut = (p.soldout_options || '').split(',').map((o:string) => o.trim()).includes(opt);
                           return (
                             <button
