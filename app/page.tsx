@@ -26,12 +26,16 @@ export default function Home() {
   const handleSubmitOrder = async (p: any) => {
     const order = orders[p.id];
     if (!order?.selectedOption || !order?.name || !order?.phone || !order?.address) {
-      return alert('옵션 선택 및 배송지 등 모든 정보를 입력해주세요!');
+      return alert('옵션 선택 및 배송지 등 필수 정보를 모두 입력해주세요!');
     }
 
     const { error } = await supabase.from('orders').insert([{
       product_name: p.name,
       buyer_name: order.name,
+      
+      // 💡 입력된 닉네임이 있으면 보내고, 없으면 빈칸으로 보냅니다
+      buyer_nickname: order.nickname || '', 
+      
       buyer_phone: order.phone,
       shipping_address: order.address,
       option_selected: order.selectedOption,
@@ -60,42 +64,27 @@ export default function Home() {
       <div className="p-4 space-y-6">
         {products.map((p) => {
           const optionsArray = p.options ? p.options.split(',').map((o: string) => o.trim()) : [];
-          
-          // 💡 쉼표로 저장된 이미지 URL들을 쪼개서 사진 배열로 만듭니다.
           const imagesArray = p.image_url ? p.image_url.split(',') : [];
 
           return (
             <div key={p.id} className="bg-white p-5 rounded-2xl shadow-sm border border-gray-200">
               
-              {/* 💡 옆으로 넘기는(스와이프) 갤러리 영역입니다. 스크롤바는 깔끔하게 숨겼습니다! */}
               <div 
                 className="flex overflow-x-auto gap-3 mb-3 snap-x snap-mandatory hide-scroll" 
                 style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
               >
                 <style>{`.hide-scroll::-webkit-scrollbar { display: none; }`}</style>
                 {imagesArray.map((imgUrl: string, idx: number) => (
-                  <img 
-                    key={idx} 
-                    src={imgUrl} 
-                    className="w-full shrink-0 snap-center h-80 object-cover rounded-xl bg-gray-50 border border-gray-100" 
-                    alt={`${p.name} 이미지 ${idx + 1}`}
-                  />
+                  <img key={idx} src={imgUrl} className="w-full shrink-0 snap-center h-80 object-cover rounded-xl bg-gray-50 border border-gray-100" alt={`${p.name} 이미지 ${idx + 1}`}/>
                 ))}
               </div>
               
-              {/* 사진이 2장 이상일 때만 안내 문구를 띄워줍니다 */}
-              {imagesArray.length > 1 && (
-                <p className="text-center text-xs text-gray-400 font-bold mb-5 mt-1 animate-pulse">← 사진을 옆으로 넘겨보세요 →</p>
-              )}
+              {imagesArray.length > 1 && <p className="text-center text-xs text-gray-400 font-bold mb-5 mt-1 animate-pulse">← 사진을 옆으로 넘겨보세요 →</p>}
 
               <h1 className="text-lg font-bold text-black">{p.name}</h1>
               <p className="text-red-600 font-black text-xl mb-4">{p.price.toLocaleString()}원</p>
               
-              {p.description && (
-                <div className="mb-6 p-4 bg-gray-50 rounded-xl text-sm text-gray-700 leading-relaxed whitespace-pre-wrap border border-gray-100">
-                  {p.description}
-                </div>
-              )}
+              {p.description && <div className="mb-6 p-4 bg-gray-50 rounded-xl text-sm text-gray-700 leading-relaxed whitespace-pre-wrap border border-gray-100">{p.description}</div>}
 
               <div className="space-y-4 border-t border-gray-100 pt-4">
                 <p className="text-sm font-bold text-black">옵션 선택</p>
@@ -108,11 +97,7 @@ export default function Home() {
                         disabled={isSoldOut}
                         onClick={() => handleOptionClick(p.id, opt)}
                         className={`px-4 py-2 rounded-lg text-sm font-bold border transition-colors ${
-                          isSoldOut 
-                            ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed line-through' 
-                            : orders[p.id]?.selectedOption === opt 
-                              ? 'bg-black text-white border-black' 
-                              : 'bg-white text-gray-800 border-gray-300 hover:bg-gray-50'
+                          isSoldOut ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed line-through' : orders[p.id]?.selectedOption === opt ? 'bg-black text-white border-black' : 'bg-white text-gray-800 border-gray-300 hover:bg-gray-50'
                         }`}
                       >
                         {opt} {isSoldOut && '[품절]'}
@@ -121,7 +106,11 @@ export default function Home() {
                   })}
                 </div>
                 
-                <input placeholder="입금자명" className="w-full border border-gray-300 p-3.5 rounded-xl text-base text-black placeholder-gray-500 focus:border-black outline-none transition" onChange={(e) => handleInputChange(p.id, 'name', e.target.value)} />
+                <input placeholder="입금자명 (필수)" className="w-full border border-gray-300 p-3.5 rounded-xl text-base text-black placeholder-gray-500 focus:border-black outline-none transition" onChange={(e) => handleInputChange(p.id, 'name', e.target.value)} />
+                
+                {/* 💡 닉네임 입력칸이 새롭게 추가되었습니다 */}
+                <input placeholder="주문자 닉네임 (선택사항)" className="w-full border border-gray-300 p-3.5 rounded-xl text-base text-black placeholder-gray-500 focus:border-black outline-none transition bg-gray-50" onChange={(e) => handleInputChange(p.id, 'nickname', e.target.value)} />
+                
                 <input placeholder="연락처 (예: 01012345678)" className="w-full border border-gray-300 p-3.5 rounded-xl text-base text-black placeholder-gray-500 focus:border-black outline-none transition" onChange={(e) => handleInputChange(p.id, 'phone', e.target.value)} />
                 <input placeholder="배송지 주소 (상세주소 포함)" className="w-full border border-gray-300 p-3.5 rounded-xl text-base text-black placeholder-gray-500 focus:border-black outline-none transition" onChange={(e) => handleInputChange(p.id, 'address', e.target.value)} />
                 

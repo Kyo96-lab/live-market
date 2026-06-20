@@ -18,7 +18,6 @@ export default function AdminDashboard() {
   const [newProductOptions, setNewProductOptions] = useState('');
   const [newProductDescription, setNewProductDescription] = useState('');
   
-  // 💡 한 장이 아닌 '여러 장'을 담기 위해 배열(Array)로 변경했습니다!
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [isAddingProduct, setIsAddingProduct] = useState(false);
 
@@ -53,18 +52,22 @@ export default function AdminDashboard() {
 
   const handleDispatch = async (orderId: string) => {
     const trackingNum = trackingInputs[orderId];
-    if (!trackingNum) return alert('운송장 번호를 입력해주세요!');
-    const { error } = await supabase.from('orders').update({ status: '배송중', tracking_number: trackingNum }).eq('id', orderId);
+    if (!trackingNum) return alert('송장 번호를 입력해주세요!');
+    
+    // 💡 택배사를 '우체국'으로 고정하여 데이터베이스에 저장합니다.
+    const finalTracking = `우체국 ${trackingNum}`;
+    
+    const { error } = await supabase.from('orders').update({ status: '배송중', tracking_number: finalTracking }).eq('id', orderId);
     if (error) alert('운송장 등록 실패');
     else { alert('발송 처리가 완료되었습니다!'); fetchOrders(); }
   };
 
   const handleDownloadExcel = () => {
     if (orders.length === 0) return alert('다운로드할 주문 내역이 없습니다.');
-    const headers = ['주문일시', '주문자명', '연락처', '상품명', '옵션', '배송지', '결제액', '상태', '운송장번호'];
+    const headers = ['주문일시', '주문자명', '닉네임', '연락처', '상품명', '옵션', '배송지', '결제액', '상태', '운송장번호'];
     const rows = orders.map(o => [
       new Date(o.created_at).toLocaleString(),
-      o.buyer_name, o.buyer_phone, o.product_name || '', o.option_selected,
+      o.buyer_name, o.buyer_nickname || '', o.buyer_phone, o.product_name || '', o.option_selected,
       o.shipping_address.replace(/,/g, ' '), o.total_price, o.status, o.tracking_number || ''
     ]);
     const csvContent = "\uFEFF" + [headers, ...rows].map(e => e.join(",")).join("\n");
@@ -93,9 +96,8 @@ export default function AdminDashboard() {
     if (!newProductName || !newProductPrice || !newProductOptions || imageFiles.length === 0) return alert('모든 정보를 입력해주세요.');
     setIsAddingProduct(true);
     try {
-      // 💡 선택한 모든 사진을 동시에 업로드하고 URL들을 받아옵니다.
       const urls = await Promise.all(imageFiles.map(file => uploadImage(file)));
-      const imageUrlsString = urls.join(','); // URL들을 쉼표로 묶습니다.
+      const imageUrlsString = urls.join(','); 
       
       const { error } = await supabase.from('products').insert([{ 
         name: newProductName, 
@@ -183,7 +185,14 @@ export default function AdminDashboard() {
                       {o.status === '입금대기' && <span className="px-3 py-1 bg-red-100 text-red-600 rounded-full text-xs font-bold">입금대기</span>}
                     </div>
                     <p className="text-xs text-gray-400 mb-2">{new Date(o.created_at).toLocaleString()}</p>
-                    <h3 className="font-bold mb-1">{o.buyer_name} <span className="text-sm font-normal text-gray-500 ml-1">{o.buyer_phone}</span></h3>
+                    
+                    {/* 💡 구매자 이름 옆에 닉네임이 함께 표시되도록 추가했습니다 */}
+                    <h3 className="font-bold mb-1 flex items-center gap-2">
+                      {o.buyer_name} 
+                      {o.buyer_nickname && <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-md font-normal">{o.buyer_nickname}</span>}
+                      <span className="text-sm font-normal text-gray-500 ml-1">{o.buyer_phone}</span>
+                    </h3>
+                    
                     <p className="text-sm font-bold text-blue-600 mb-1">{o.product_name || '이전 주문'}</p>
                     <p className="text-sm font-medium mb-3">옵션: {o.option_selected}</p>
                     <div className="bg-gray-50 p-3 rounded-lg text-xs mb-4">
@@ -194,10 +203,12 @@ export default function AdminDashboard() {
                     <div className="flex flex-col md:flex-row gap-2 justify-end border-t pt-3 mt-2">
                       {o.status === '입금대기' && <button onClick={() => handleUpdateStatus(o.id, '결제완료')} className="text-xs bg-black text-white px-4 py-2 rounded-lg font-bold">✓ 입금 확인</button>}
                       {o.status === '결제완료' && (
-                        <div className="flex w-full md:w-auto gap-2">
-                          <input type="text" placeholder="택배사 및 송장번호" className="flex-1 md:w-48 text-xs border p-2 rounded-lg outline-none" value={trackingInputs[o.id] || ''} onChange={(e) => setTrackingInputs({...trackingInputs, [o.id]: e.target.value})} />
-                          <button onClick={() => handleDispatch(o.id)} className="text-xs bg-blue-600 text-white px-3 py-2 rounded-lg font-bold">발송 처리</button>
-                          <button onClick={() => handleUpdateStatus(o.id, '입금대기')} className="text-xs bg-gray-200 px-3 py-2 rounded-lg font-bold">✕ 취소</button>
+                        <div className="flex w-full md:w-auto items-center bg-gray-50 border border-gray-200 rounded-lg p-1">
+                          {/* 💡 우체국 텍스트를 고정하고 입력창과 묶었습니다 */}
+                          <span className="text-xs font-black text-gray-600 pl-3 pr-2">우체국</span>
+                          <input type="text" placeholder="송장번호 숫자만 입력" className="flex-1 md:w-40 text-xs bg-transparent p-2 outline-none" value={trackingInputs[o.id] || ''} onChange={(e) => setTrackingInputs({...trackingInputs, [o.id]: e.target.value})} />
+                          <button onClick={() => handleDispatch(o.id)} className="text-xs bg-blue-600 text-white px-3 py-2 rounded-md font-bold mx-1">발송 처리</button>
+                          <button onClick={() => handleUpdateStatus(o.id, '입금대기')} className="text-xs bg-gray-200 text-gray-600 px-3 py-2 rounded-md font-bold">✕ 취소</button>
                         </div>
                       )}
                       {o.status === '배송중' && <button onClick={() => handleUpdateStatus(o.id, '결제완료')} className="text-xs bg-gray-200 px-4 py-2 rounded-lg font-bold">✕ 배송전으로 되돌리기</button>}
@@ -215,8 +226,7 @@ export default function AdminDashboard() {
               <form onSubmit={handleAddProduct} className="bg-white p-6 rounded-2xl shadow-sm border sticky top-28">
                 <h2 className="font-bold text-lg mb-4 pb-3 border-b">새 상품 등록</h2>
                 <div className="mb-5">
-                  <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-xl cursor-pointer bg-gray-50 hover:bg-gray-100 transition">
-                    {/* 💡 multiple 속성을 달아 한 번에 여러 장을 고를 수 있게 했습니다 */}
+                  <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-xl cursor-pointer bg-gray-50 hover:bg-gray-100 transition relative overflow-hidden">
                     <input 
                       type="file" 
                       accept="image/*" 
@@ -226,11 +236,21 @@ export default function AdminDashboard() {
                         if (e.target.files) setImageFiles(Array.from(e.target.files));
                       }} 
                     />
-                    <span className="text-2xl mb-2">📸</span>
-                    <span className="text-xs text-gray-500 font-bold">사진 여러 장 선택 가능</span>
+                    {/* 💡 사진을 올리면 글씨 대신 썸네일 미리보기가 가로로 스크롤되며 예쁘게 뜨도록 수정했습니다 */}
+                    {imageFiles.length > 0 ? (
+                      <div className="flex gap-2 p-2 overflow-x-auto w-full h-full items-center">
+                        {imageFiles.map((file, idx) => (
+                          <img key={idx} src={URL.createObjectURL(file)} alt="미리보기" className="h-24 w-24 object-cover rounded-lg shadow-sm shrink-0 border" />
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center">
+                        <span className="text-2xl mb-2">📸</span>
+                        <span className="text-xs text-gray-500 font-bold">사진 여러 장 선택 가능</span>
+                      </div>
+                    )}
                   </label>
-                  {/* 💡 몇 장이 선택되었는지 보여줍니다 */}
-                  {imageFiles.length > 0 && <p className="text-xs text-green-600 mt-2 font-bold ml-1">✓ 총 {imageFiles.length}장 선택됨</p>}
+                  {imageFiles.length > 0 && <p className="text-xs text-green-600 mt-2 font-bold ml-1 text-center">✓ 총 {imageFiles.length}장 첨부됨 (다시 클릭해 재선택 가능)</p>}
                 </div>
                 <div className="mb-3"><input type="text" value={newProductName} onChange={(e) => setNewProductName(e.target.value)} placeholder="상품명" className="w-full border p-3 rounded-xl text-sm outline-none" /></div>
                 <div className="mb-3"><input type="number" value={newProductPrice} onChange={(e) => setNewProductPrice(e.target.value)} placeholder="가격 (숫자만)" className="w-full border p-3 rounded-xl text-sm outline-none" /></div>
@@ -246,7 +266,6 @@ export default function AdminDashboard() {
             <div className="col-span-1 md:col-span-2 space-y-4">
               {products.map((p) => {
                 const optionsArray = p.options ? p.options.split(',').map((o:string) => o.trim()) : [];
-                // 💡 관리자 목록에서는 쉼표로 구분된 사진 중 '첫 번째 사진'만 대표로 띄워줍니다.
                 const firstImage = p.image_url ? p.image_url.split(',')[0] : '';
 
                 return (
