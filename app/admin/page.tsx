@@ -6,7 +6,7 @@ export default function AdminDashboard() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [passwordInput, setPasswordInput] = useState('');
   
-  // 🚨 원래 설정하셨던 누나분 전용 비밀번호로 꼭 다시 바꿔주세요!
+  // 🚨 설정하신 비밀번호
   const ADMIN_PASSWORD = '5530'; 
 
   const [activeTab, setActiveTab] = useState('orders');
@@ -21,7 +21,7 @@ export default function AdminDashboard() {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [isAddingProduct, setIsAddingProduct] = useState(false);
 
-  // 💡 운송장 번호 입력을 관리하는 상태
+  // 💡 운송장 번호 입력 상태 관리
   const [trackingInputs, setTrackingInputs] = useState<any>({});
 
   useEffect(() => {
@@ -53,7 +53,6 @@ export default function AdminDashboard() {
     }
   };
 
-  // 💡 운송장 번호 등록 및 배송중 처리 함수
   const handleDispatch = async (orderId: string) => {
     const trackingNum = trackingInputs[orderId];
     if (!trackingNum) return alert('운송장 번호를 입력해주세요!');
@@ -167,7 +166,7 @@ export default function AdminDashboard() {
                         <button onClick={() => handleUpdateStatus(o.id, '결제완료')} className="text-xs bg-black text-white px-4 py-2 rounded-lg font-bold hover:bg-gray-800">✓ 입금 확인</button>
                       )}
                       
-                      {/* 💡 이 부분이 핵심입니다! 결제완료 상태일 때 운송장 입력 폼이 노출됩니다. */}
+                      {/* 💡 결제완료 상태일 때 운송장 입력 폼 노출 */}
                       {o.status === '결제완료' && (
                         <div className="flex w-full md:w-auto gap-2">
                           <input 
@@ -193,7 +192,7 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* ... 상품 관리 탭 부분 ... */}
+        {/* ... 상품 관리 탭 생략 ... */}
         {activeTab === 'products' && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
             <div className="col-span-1">
