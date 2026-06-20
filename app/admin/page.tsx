@@ -16,6 +16,10 @@ export default function AdminDashboard() {
   const [newProductName, setNewProductName] = useState('');
   const [newProductPrice, setNewProductPrice] = useState('');
   const [newProductOptions, setNewProductOptions] = useState('');
+  
+  // 💡 상세 설명 입력을 위한 상태 추가
+  const [newProductDescription, setNewProductDescription] = useState('');
+  
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [isAddingProduct, setIsAddingProduct] = useState(false);
 
@@ -91,10 +95,21 @@ export default function AdminDashboard() {
     setIsAddingProduct(true);
     try {
       const imageUrl = await uploadImage(imageFile);
-      const { error } = await supabase.from('products').insert([{ name: newProductName, price: parseInt(newProductPrice), options: newProductOptions, image_url: imageUrl }]);
+      
+      // 💡 데이터베이스에 전송할 때 description(상세 설명)도 함께 보냅니다.
+      const { error } = await supabase.from('products').insert([{ 
+        name: newProductName, 
+        price: parseInt(newProductPrice), 
+        options: newProductOptions, 
+        description: newProductDescription, // 추가됨
+        image_url: imageUrl 
+      }]);
+      
       if (error) throw error;
       alert('등록 성공!');
-      setNewProductName(''); setNewProductPrice(''); setNewProductOptions(''); setImageFile(null);
+      
+      // 💡 입력창 초기화
+      setNewProductName(''); setNewProductPrice(''); setNewProductOptions(''); setNewProductDescription(''); setImageFile(null);
       fetchProducts();
     } catch (error) { alert('오류 발생'); } 
     finally { setIsAddingProduct(false); }
@@ -106,24 +121,16 @@ export default function AdminDashboard() {
     fetchProducts();
   };
 
-  // 💡 개별 옵션 품절 스위치 함수
   const toggleOptionSoldOut = async (productId: string, option: string, currentSoldOutText: string) => {
-    // 현재 품절된 옵션들을 배열로 만듭니다.
     const soldOutArray = currentSoldOutText ? currentSoldOutText.split(',').map(o => o.trim()).filter(Boolean) : [];
     let newSoldOutArray;
-    
-    // 이미 품절 목록에 있다면 빼고(판매중), 없다면 넣습니다(품절).
-    if (soldOutArray.includes(option)) {
-      newSoldOutArray = soldOutArray.filter(o => o !== option);
-    } else {
-      newSoldOutArray = [...soldOutArray, option];
-    }
+    if (soldOutArray.includes(option)) newSoldOutArray = soldOutArray.filter(o => o !== option);
+    else newSoldOutArray = [...soldOutArray, option];
     
     const newSoldOutText = newSoldOutArray.join(',');
     const { error } = await supabase.from('products').update({ soldout_options: newSoldOutText }).eq('id', productId);
-    
     if (error) alert('상태 변경 실패');
-    else fetchProducts(); // 변경 후 화면 새로고침
+    else fetchProducts(); 
   };
 
   const handleLogin = (e: React.FormEvent) => {
@@ -162,6 +169,7 @@ export default function AdminDashboard() {
       <div className="max-w-6xl mx-auto px-4 py-6">
         {activeTab === 'orders' && (
           <div className="space-y-6">
+            {/* ... 주문 내역 리스트 (생략 없이 기존과 동일) ... */}
             <div className="flex justify-between items-center px-1">
               <h2 className="font-bold text-lg">최근 주문 내역</h2>
               <div className="flex gap-2">
@@ -217,9 +225,20 @@ export default function AdminDashboard() {
                   </label>
                   {imageFile && <p className="text-xs text-green-600 mt-2 font-bold ml-1">✓ {imageFile.name}</p>}
                 </div>
-                <div className="mb-4"><input type="text" value={newProductName} onChange={(e) => setNewProductName(e.target.value)} placeholder="상품명" className="w-full border p-3.5 rounded-xl text-sm outline-none" /></div>
-                <div className="mb-4"><input type="number" value={newProductPrice} onChange={(e) => setNewProductPrice(e.target.value)} placeholder="가격 (숫자만)" className="w-full border p-3.5 rounded-xl text-sm outline-none" /></div>
-                <div className="mb-6"><input type="text" value={newProductOptions} onChange={(e) => setNewProductOptions(e.target.value)} placeholder="옵션 (쉼표 구분)" className="w-full border p-3.5 rounded-xl text-sm outline-none" /></div>
+                <div className="mb-3"><input type="text" value={newProductName} onChange={(e) => setNewProductName(e.target.value)} placeholder="상품명" className="w-full border p-3 rounded-xl text-sm outline-none" /></div>
+                <div className="mb-3"><input type="number" value={newProductPrice} onChange={(e) => setNewProductPrice(e.target.value)} placeholder="가격 (숫자만)" className="w-full border p-3 rounded-xl text-sm outline-none" /></div>
+                <div className="mb-3"><input type="text" value={newProductOptions} onChange={(e) => setNewProductOptions(e.target.value)} placeholder="옵션 (쉼표 구분)" className="w-full border p-3 rounded-xl text-sm outline-none" /></div>
+                
+                {/* 💡 이 곳에 상세 설명(textarea)을 길게 적을 수 있는 공간이 추가되었습니다 */}
+                <div className="mb-5">
+                  <textarea 
+                    value={newProductDescription} 
+                    onChange={(e) => setNewProductDescription(e.target.value)} 
+                    placeholder="상품 상세 설명 (재질, 핏, 안내사항 등)" 
+                    className="w-full border p-3 rounded-xl text-sm outline-none resize-none h-24" 
+                  />
+                </div>
+                
                 <button type="submit" disabled={isAddingProduct} className="w-full bg-black text-white p-4 rounded-xl font-bold disabled:bg-gray-400">{isAddingProduct ? '등록 중...' : '추가하기'}</button>
               </form>
             </div>
@@ -229,20 +248,24 @@ export default function AdminDashboard() {
                 const optionsArray = p.options ? p.options.split(',').map((o:string) => o.trim()) : [];
                 return (
                   <div key={p.id} className="bg-white p-5 rounded-2xl shadow-sm border relative">
-                    <div className="flex gap-5 items-center">
-                      <img src={p.image_url} alt="" className="w-24 h-24 object-cover rounded-xl bg-gray-100"/>
+                    <div className="flex gap-5 items-start">
+                      <img src={p.image_url} alt="" className="w-24 h-24 object-cover rounded-xl bg-gray-100 flex-shrink-0"/>
                       <div className="flex-grow">
                         <h3 className="font-bold text-lg">{p.name}</h3>
-                        <p className="text-red-500 font-black text-sm">{p.price.toLocaleString()}원</p>
+                        <p className="text-red-500 font-black text-sm mb-2">{p.price.toLocaleString()}원</p>
+                        
+                        {/* 💡 등록된 상세 설명이 있으면 관리자도 볼 수 있게 표시합니다 */}
+                        {p.description && (
+                          <p className="text-xs text-gray-600 bg-gray-50 p-2 rounded whitespace-pre-wrap">{p.description}</p>
+                        )}
                       </div>
                       <button onClick={() => handleDeleteProduct(p.id)} className="absolute top-4 right-4 text-gray-400 text-xl">🗑️</button>
                     </div>
                     
-                    {/* 💡 이 부분이 추가되었습니다! 옵션별 판매/품절 관리 영역 */}
                     <div className="mt-4 pt-4 border-t border-gray-100">
                       <p className="text-xs font-bold text-gray-500 mb-2">📦 옵션 재고 관리 (클릭 시 상태 변경)</p>
                       <div className="flex flex-wrap gap-2">
-{optionsArray.map((opt: string) => {                          // 데이터베이스에 저장된 품절 텍스트를 검사합니다.
+                        {optionsArray.map((opt: string) => {
                           const isSoldOut = (p.soldout_options || '').split(',').map((o:string) => o.trim()).includes(opt);
                           return (
                             <button

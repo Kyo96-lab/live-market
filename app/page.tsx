@@ -66,18 +66,24 @@ export default function Home() {
               <img src={p.image_url} className="w-full h-64 object-cover rounded-xl mb-4 bg-gray-50" />
               <h1 className="text-lg font-bold text-black">{p.name}</h1>
               <p className="text-red-600 font-black text-xl mb-4">{p.price.toLocaleString()}원</p>
+              
+              {/* 💡 상품 상세 설명이 표시되는 영역입니다. 줄바꿈(엔터)이 그대로 적용됩니다. */}
+              {p.description && (
+                <div className="mb-6 p-4 bg-gray-50 rounded-xl text-sm text-gray-700 leading-relaxed whitespace-pre-wrap border border-gray-100">
+                  {p.description}
+                </div>
+              )}
 
               <div className="space-y-4 border-t border-gray-100 pt-4">
                 <p className="text-sm font-bold text-black">옵션 선택</p>
                 <div className="flex flex-wrap gap-2">
                   {optionsArray.map((opt: string) => {
-                    // 💡 품절 여부를 확인합니다.
                     const isSoldOut = (p.soldout_options || '').split(',').map((o:string)=>o.trim()).includes(opt);
                     
                     return (
                       <button 
                         key={opt}
-                        disabled={isSoldOut} // 품절 시 클릭 방지
+                        disabled={isSoldOut}
                         onClick={() => handleOptionClick(p.id, opt)}
                         className={`px-4 py-2 rounded-lg text-sm font-bold border transition-colors ${
                           isSoldOut 
